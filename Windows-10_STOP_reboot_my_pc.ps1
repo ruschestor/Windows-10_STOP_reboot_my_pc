@@ -1,5 +1,5 @@
 # Script: Windows 10 please STOP reboot my PC/Laptop
-# Version: 1.0 30.12.2018
+# Version: 1.1 23.03.2019
 # Blog: https://itgeeknotes.blogspot.com
 
 ########## PREPARATIONS  ##########
@@ -16,7 +16,7 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 
 ########## ACTIONS  ##########
 
-##### PART 1 #####
+Write-Host "##### PART 1 #####" -ForegroundColor Green
 # Disable Scheduled Tasks "UpdateOrchestrator - Reboot" and "UpdateOrchestrator - UpdateAssistantWakeupRun"
 Get-ScheduledTask -TaskName Reboot -TaskPath "\Microsoft\Windows\UpdateOrchestrator\" | Disable-ScheduledTask
 Get-ScheduledTask -TaskName UpdateAssistantWakeupRun -TaskPath "\Microsoft\Windows\UpdateOrchestrator\" | Disable-ScheduledTask
@@ -31,7 +31,7 @@ Get-ScheduledTask | ? {$_.Settings.WakeToRun -eq $true} | % {$_.Settings.WakeToR
 icacls $env:windir"\System32\Tasks\Microsoft\Windows\UpdateOrchestrator\Reboot" /inheritance:r /deny *S-1-1-0:F /deny "SYSTEM:F" /deny "Local Service:F" /deny *S-1-5-32-544:F
 icacls $env:windir"\System32\Tasks\Microsoft\Windows\UpdateOrchestrator\UpdateAssistantWakeupRun" /inheritance:r /deny *S-1-1-0:F /deny "SYSTEM:F" /deny "Local Service:F" /deny *S-1-5-32-544:F
 
-##### PART 2 #####
+Write-Host "##### PART 2 #####" -ForegroundColor Green
 # Set NoAutoRebootWithLoggedOnUsers & AUOptions
 $Reg_NoAutoRebootWithLoggedOnUsers_AUOptions_Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU"
 $Reg_NoAutoRebootWithLoggedOnUsers_Name = "NoAutoRebootWithLoggedOnUsers"
@@ -42,14 +42,14 @@ if (!(Test-Path $Reg_NoAutoRebootWithLoggedOnUsers_AUOptions_Path)) { New-Item -
 New-ItemProperty -Path $Reg_NoAutoRebootWithLoggedOnUsers_AUOptions_Path -Name $Reg_NoAutoRebootWithLoggedOnUsers_Name -Value $Reg_NoAutoRebootWithLoggedOnUsers_Value -PropertyType DWORD -Force | Out-Null
 New-ItemProperty -Path $Reg_NoAutoRebootWithLoggedOnUsers_AUOptions_Path -Name $Reg_AUOptions_Name -Value $Reg_AUOptions_Value -PropertyType DWORD -Force | Out-Null
 
-##### PART 3 #####
+Write-Host "##### PART 3 #####" -ForegroundColor Green
 # Deny Wake my PC by Power settings
 # Get-ScheduledTask | where {$_.settings.waketorun}
 # https://www.tenforums.com/tutorials/63070-enable-disable-wake-timers-windows-10-a.html
 powercfg /SETDCVALUEINDEX SCHEME_CURRENT 238c9fa8-0aad-41ed-83f4-97be242c8f20 bd3b718a-0680-4d9d-8ab2-e1d2b4ac806d 0
 powercfg /SETACVALUEINDEX SCHEME_CURRENT 238c9fa8-0aad-41ed-83f4-97be242c8f20 bd3b718a-0680-4d9d-8ab2-e1d2b4ac806d 0
 
-##### PART 4 #####
+Write-Host "##### PART 4 #####" -ForegroundColor Green
 # Turn On Show More Windows Update Restart Notifications in Settings
 # https://www.tenforums.com/tutorials/76305-turn-off-windows-update-restart-notifications-windows-10-a.html
 $Reg_RestartNotificationsAllowed_Path = "HKLM:\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings"
@@ -60,11 +60,15 @@ if (!(Test-Path $Reg_RestartNotificationsAllowed_Path)) { New-Item -Path $Reg_Re
 New-ItemProperty -Path $Reg_RestartNotificationsAllowed_Path -Name $Reg_RestartNotificationsAllowed_Name -Value $Reg_RestartNotificationsAllowed_Value -PropertyType DWORD -Force | Out-Null
 New-ItemProperty -Path $Reg_RestartNotificationsAllowed_Path -Name $Reg_RestartNotificationsAllowed2_Name -Value $Reg_RestartNotificationsAllowed_Value -PropertyType DWORD -Force | Out-Null
 
-##### PART 5 #####
+Write-Host "##### PART 5 #####" -ForegroundColor Green
 # Prohibition of waking from sleep by external devices
 # https://www.vistax64.com/threads/power-options-and-sleep-mode-problems.63567/
-$AllDevicesWakeUp = powercfg -devicequery wake_armed
-foreach ($Device in $AllDevicesWakeUp) { if ($Device -ne "") { powercfg -devicedisablewake $Device } }
+Write-Host "Do you want to activate prohibition of waking from sleep by external devices (relevant for laptops)?" -ForegroundColor Yellow -NoNewline
+$reply = Read-Host -Prompt "[y/n]"
+if ( $reply -match "[yY]" ) { 
+    $AllDevicesWakeUp = powercfg -devicequery wake_armed
+    foreach ($Device in $AllDevicesWakeUp) { if ($Device -ne "") { powercfg -devicedisablewake $Device } }
+}
 
 pause
 # Done #
